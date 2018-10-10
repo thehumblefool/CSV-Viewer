@@ -68,8 +68,10 @@ public class Controller {
         String selectedFile = selectFile.getSelectionModel().getSelectedItem();
         File file = new File(directory, selectedFile);
         String[] header = new CSVReader(file).getHeader();
-        for(int i=header.length-1; i>=0; --i) {
-            selectColumns.getItems().add(new CheckBox(header[i]));
+        if(header != null) {
+            for(int i=header.length-1; i>=0; --i) {
+                selectColumns.getItems().add(new CheckBox(header[i]));
+            }
         }
     }
 
