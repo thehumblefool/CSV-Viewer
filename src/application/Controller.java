@@ -2,15 +2,15 @@ package application;
 
 import csv.CSVFilter;
 import csv.CSVReader;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Tooltip;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.DirectoryChooser;
 
 import java.io.File;
+import java.util.*;
 
 public class Controller {
 
@@ -24,16 +24,32 @@ public class Controller {
     private ComboBox<String> selectFile;
 
     @FXML
-    private ComboBox<CheckBox> selectColumns;
+    private MenuButton selectColumns;
+
+    @FXML
+    private TableView<ObservableList<String>> table;
 
     private File directory;
 
     private String defaultPath;
 
+    private String selectedFile;
+
+    private List<CheckMenuItem> items;
+
+    private Set<Integer> selectedColumns;
+
+    private Map<String, Integer> columns;
+
+    private String[] header;
+
     public void initialize() {
         defaultPath = "/home/toor/Documents/CSVs/";
         directory = new File(defaultPath);
-        selectFile.setTooltip(new Tooltip("Select a file"));
+        items = new ArrayList<>();
+        columns = new HashMap<>();
+        selectedColumns = new TreeSet<>();
+        selectFile.setTooltip(new Tooltip("Select a File"));
         selectDirectory.setTooltip(new Tooltip("Select a Folder"));
         //selectColumms.setTooltip(new Tooltip("Select Columns"));
         loadFiles(directory);
@@ -58,6 +74,9 @@ public class Controller {
             directory = path;
             selectFile.getItems().clear();
             selectColumns.getItems().clear();
+            items.clear();
+            selectedColumns.clear();
+            columns.clear();
             loadFiles(directory);
         }
     }
@@ -65,19 +84,41 @@ public class Controller {
     @FXML
     public void loadColumns() {
         selectColumns.getItems().clear();
-        String selectedFile = selectFile.getSelectionModel().getSelectedItem();
+        selectedFile = selectFile.getSelectionModel().getSelectedItem();
         File file = new File(directory, selectedFile);
-        String[] header = new CSVReader(file).getHeader();
+        header = new CSVReader(file).getHeader();
         if(header != null) {
-            for(int i=header.length-1; i>=0; --i) {
-                selectColumns.getItems().add(new CheckBox(header[i]));
+            items.clear();
+            selectedColumns.clear();
+            columns.clear();
+            for(int i=0; i<header.length; ++i) {
+                CheckMenuItem checkMenuItem = new CheckMenuItem(header[i]);
+                columns.put(header[i], i);
+                checkMenuItem.selectedProperty().addListener( ((observable, oldValue, newValue) -> {
+                    if(newValue) {
+                        selectedColumns.add(columns.get(checkMenuItem.getText()));
+                    } else {
+                        selectedColumns.remove(columns.get(checkMenuItem.getText()));
+                    }
+                }));
+                items.add(checkMenuItem);
             }
+            selectColumns.getItems().addAll(items);
         }
     }
 
     @FXML
     public void loadData() {
-        System.out.println("Done");
-        System.out.println(selectColumns.getSelectionModel().getSelectedItem());
+        table.getColumns().clear();
+        int i=0;
+        for(int num : selectedColumns) {
+            final int index = i;
+            TableColumn<ObservableList<String>, String> column = new TableColumn<>(header[num]);
+            column.setCellValueFactory( param -> new ReadOnlyObjectWrapper<>(param.getValue().get(index)));
+            table.getColumns().add(column);
+            ++i;
+        }
+        CSVReader csvReader = new CSVReader(new File(directory, selectedFile));
+        csvReader.loadDataInToTable(table, selectedColumns);
     }
 }
