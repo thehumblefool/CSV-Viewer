@@ -12,7 +12,7 @@
       <HBox prefHeight="30.0" prefWidth="600.0" BorderPane.alignment="CENTER">
             <Button fx:id="selectDirectory" mnemonicParsing="false" onAction="#loadFiles" text="Open..." />
             <ComboBox fx:id="selectFile" onAction="#loadColumns" prefHeight="26.0" prefWidth="285.0" promptText="Select Files" />
-            <MenuButton fx:id="selectColumns" alignment="CENTER" mnemonicParsing="false" onAction="#loadData" prefHeight="26.0" prefWidth="193.0" text="Select Columns" />
+            <MenuButton fx:id="selectColumns" alignment="CENTER" mnemonicParsing="false" onAction="#loadData" prefHeight="26.0" prefWidth="193.0" text="Select Columns"/>
             <Button mnemonicParsing="false" onAction="#loadData" text="Submit" />
       </HBox>
    </top>
