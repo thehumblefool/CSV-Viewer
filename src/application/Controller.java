@@ -2,7 +2,6 @@ package application;
 
 import csv.CSVFilter;
 import csv.CSVReader;
-
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -30,8 +29,6 @@ public class Controller {
     @FXML
     private TableView<ObservableList<String>> table;
 
-    private List<CustomMenuItem> customMenuItems;
-
     private File directory;
 
     private String defaultPath;
@@ -47,24 +44,27 @@ public class Controller {
     public void initialize() {
         defaultPath = "/home/toor/Documents/CSVs/";
         directory = new File(defaultPath);
-        customMenuItems = new ArrayList<>();
         columnsMap = new HashMap<>();
         selectedColumns = new TreeSet<>();
+        selectedFile = null;
+        header = null;
         selectFile.setTooltip(new Tooltip("Select a File"));
         selectDirectory.setTooltip(new Tooltip("Select a Folder"));
         loadFiles(directory);
     }
 
     private void loadFiles(File directory) {
-        String[] files = directory.list(new CSVFilter());
-        if(files != null) {
-            new Thread( () -> {
-                for (int i = files.length - 1; i >= 0; --i)
-                    selectFile.getItems().add(files[i]);
+        new Thread(() -> {
+            String[] files = directory.list(new CSVFilter());
+            if (files != null) {
+                Arrays.sort(files, String.CASE_INSENSITIVE_ORDER);
+                for (String file : files)
+                    selectFile.getItems().add(file);
                 selectFile.setPromptText("Select a file");
-            }).start();
-        }
+            }
+        }).start();
     }
+
 
     @FXML
     public void loadFiles() {
@@ -77,7 +77,6 @@ public class Controller {
             selectFile.getItems().clear();
             selectedFile = null;
             selectColumns.getItems().clear();
-            customMenuItems.clear();
             selectedColumns.clear();
             columnsMap.clear();
             header = null;
@@ -89,12 +88,14 @@ public class Controller {
     public void loadColumns() {
         selectColumns.getItems().clear();
         selectedFile = selectFile.getSelectionModel().getSelectedItem();
+        if(directory==null|| selectedFile==null)
+            return;
         File file = new File(directory, selectedFile);
+        if(!file.exists())
+            return;
         header = new CSVReader(file).getHeader();
         if(header != null) {
-
             new Thread( () -> {
-                customMenuItems.clear();
                 selectedColumns.clear();
                 columnsMap.clear();
                 for(int i=0; i<header.length; ++i) {
@@ -109,28 +110,32 @@ public class Controller {
                     }));
                     CustomMenuItem customMenuItem = new CustomMenuItem(checkBox);
                     customMenuItem.setHideOnClick(false);
-                    customMenuItems.add(customMenuItem);
+                    selectColumns.getItems().add(customMenuItem);
                 }
-                selectColumns.getItems().addAll(customMenuItems);
+
             }).start();
         }
     }
 
     @FXML
     public void loadData() {
-        if(selectedFile==null)
-            return;
-        table.getItems().clear();
-        table.getColumns().clear();
-        int i=0;
-        for(int num : selectedColumns) {
-            final int index = i;
-            TableColumn<ObservableList<String>, String> column = new TableColumn<>(header[num]);
-            column.setCellValueFactory( param -> new ReadOnlyObjectWrapper<>(param.getValue().get(index)));
-            table.getColumns().add(column);
-            ++i;
-        }
 
-        new Thread( () -> new CSVReader(new File(directory, selectedFile)).loadDataInToTable(table, selectedColumns)).start();
+        new Thread( () -> {
+
+            if(selectedFile==null)
+                return;
+            table.getColumns().clear();
+            table.getItems().clear();
+            int i=0;
+            for(int num : selectedColumns) {
+                final int index = i;
+                TableColumn<ObservableList<String>, String> column = new TableColumn<>(header[num]);
+                column.setCellValueFactory( param -> new ReadOnlyObjectWrapper<>(param.getValue().get(index)));
+                table.getColumns().add(column);
+                ++i;
+            }
+            new CSVReader(new File(directory, selectedFile)).loadDataInToTable(table, selectedColumns);
+
+        }).start();
     }
 }
