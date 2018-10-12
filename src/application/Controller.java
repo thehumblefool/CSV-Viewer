@@ -2,6 +2,7 @@ package application;
 
 import csv.CSVFilter;
 import csv.CSVReader;
+
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -29,38 +30,39 @@ public class Controller {
     @FXML
     private TableView<ObservableList<String>> table;
 
+    private List<CustomMenuItem> customMenuItems;
+
     private File directory;
 
     private String defaultPath;
 
     private String selectedFile;
 
-    private List<CheckMenuItem> items;
-
     private Set<Integer> selectedColumns;
 
-    private Map<String, Integer> columns;
+    private Map<String, Integer> columnsMap;
 
     private String[] header;
 
     public void initialize() {
         defaultPath = "/home/toor/Documents/CSVs/";
         directory = new File(defaultPath);
-        items = new ArrayList<>();
-        columns = new HashMap<>();
+        customMenuItems = new ArrayList<>();
+        columnsMap = new HashMap<>();
         selectedColumns = new TreeSet<>();
         selectFile.setTooltip(new Tooltip("Select a File"));
         selectDirectory.setTooltip(new Tooltip("Select a Folder"));
-        //selectColumms.setTooltip(new Tooltip("Select Columns"));
         loadFiles(directory);
     }
 
     private void loadFiles(File directory) {
         String[] files = directory.list(new CSVFilter());
         if(files != null) {
-            for (int i = files.length - 1; i >= 0; --i)
-                selectFile.getItems().add(files[i]);
-            selectFile.setPromptText("Select a file");
+            new Thread( () -> {
+                for (int i = files.length - 1; i >= 0; --i)
+                    selectFile.getItems().add(files[i]);
+                selectFile.setPromptText("Select a file");
+            }).start();
         }
     }
 
@@ -73,10 +75,12 @@ public class Controller {
         if(path!=null) {
             directory = path;
             selectFile.getItems().clear();
+            selectedFile = null;
             selectColumns.getItems().clear();
-            items.clear();
+            customMenuItems.clear();
             selectedColumns.clear();
-            columns.clear();
+            columnsMap.clear();
+            header = null;
             loadFiles(directory);
         }
     }
@@ -88,27 +92,35 @@ public class Controller {
         File file = new File(directory, selectedFile);
         header = new CSVReader(file).getHeader();
         if(header != null) {
-            items.clear();
-            selectedColumns.clear();
-            columns.clear();
-            for(int i=0; i<header.length; ++i) {
-                CheckMenuItem checkMenuItem = new CheckMenuItem(header[i]);
-                columns.put(header[i], i);
-                checkMenuItem.selectedProperty().addListener( ((observable, oldValue, newValue) -> {
-                    if(newValue) {
-                        selectedColumns.add(columns.get(checkMenuItem.getText()));
-                    } else {
-                        selectedColumns.remove(columns.get(checkMenuItem.getText()));
-                    }
-                }));
-                items.add(checkMenuItem);
-            }
-            selectColumns.getItems().addAll(items);
+
+            new Thread( () -> {
+                customMenuItems.clear();
+                selectedColumns.clear();
+                columnsMap.clear();
+                for(int i=0; i<header.length; ++i) {
+                    CheckBox checkBox = new CheckBox(header[i]);
+                    columnsMap.put(header[i], i);
+                    checkBox.selectedProperty().addListener( ((observable, oldValue, newValue) -> {
+                        if(newValue) {
+                            selectedColumns.add(columnsMap.get(checkBox.getText()));
+                        } else {
+                            selectedColumns.remove(columnsMap.get(checkBox.getText()));
+                        }
+                    }));
+                    CustomMenuItem customMenuItem = new CustomMenuItem(checkBox);
+                    customMenuItem.setHideOnClick(false);
+                    customMenuItems.add(customMenuItem);
+                }
+                selectColumns.getItems().addAll(customMenuItems);
+            }).start();
         }
     }
 
     @FXML
     public void loadData() {
+        if(selectedFile==null)
+            return;
+        table.getItems().clear();
         table.getColumns().clear();
         int i=0;
         for(int num : selectedColumns) {
@@ -118,7 +130,7 @@ public class Controller {
             table.getColumns().add(column);
             ++i;
         }
-        CSVReader csvReader = new CSVReader(new File(directory, selectedFile));
-        csvReader.loadDataInToTable(table, selectedColumns);
+
+        new Thread( () -> new CSVReader(new File(directory, selectedFile)).loadDataInToTable(table, selectedColumns)).start();
     }
 }
