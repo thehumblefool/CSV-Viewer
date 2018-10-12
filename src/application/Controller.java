@@ -50,21 +50,25 @@ public class Controller {
         customMenuItems = new ArrayList<>();
         columnsMap = new HashMap<>();
         selectedColumns = new TreeSet<>();
+        selectedFile = null;
+        header = null;
         selectFile.setTooltip(new Tooltip("Select a File"));
         selectDirectory.setTooltip(new Tooltip("Select a Folder"));
         loadFiles(directory);
     }
 
     private void loadFiles(File directory) {
-        String[] files = directory.list(new CSVFilter());
-        if(files != null) {
-            new Thread( () -> {
-                for (int i = files.length - 1; i >= 0; --i)
-                    selectFile.getItems().add(files[i]);
+        new Thread(() -> {
+            String[] files = directory.list(new CSVFilter());
+            if (files != null) {
+                Arrays.sort(files, String.CASE_INSENSITIVE_ORDER);
+                for (String file : files)
+                    selectFile.getItems().add(file);
                 selectFile.setPromptText("Select a file");
-            }).start();
-        }
+            }
+        }).start();
     }
+
 
     @FXML
     public void loadFiles() {
@@ -89,7 +93,9 @@ public class Controller {
     public void loadColumns() {
         selectColumns.getItems().clear();
         selectedFile = selectFile.getSelectionModel().getSelectedItem();
-        File file = new File(directory, selectedFile);
+        if(directory==null||selectedFile==null)
+            return;
+        File file = new File(directory, selectedFile); //*
         header = new CSVReader(file).getHeader();
         if(header != null) {
 
