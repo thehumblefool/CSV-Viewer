@@ -2,6 +2,7 @@ package application;
 
 import csv.CSVFilter;
 import csv.CSVReader;
+
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -42,7 +43,7 @@ public class Controller {
     private String[] header;
 
     public void initialize() {
-        defaultPath = "/home/toor/Documents/CSVs/";
+        defaultPath = File.separator + "home" + File.separator + "toor" + File.separator + "Documents" + File.separator + "CSVs";
         directory = new File(defaultPath);
         columnsMap = new HashMap<>();
         selectedColumns = new TreeSet<>();
@@ -50,7 +51,8 @@ public class Controller {
         header = null;
         selectFile.setTooltip(new Tooltip("Select a File"));
         selectDirectory.setTooltip(new Tooltip("Select a Folder"));
-        loadFiles(directory);
+        if(directory.exists() && directory.isDirectory())
+            loadFiles(directory);
     }
 
     private void loadFiles(File directory) {
@@ -60,7 +62,6 @@ public class Controller {
                 Arrays.sort(files, String.CASE_INSENSITIVE_ORDER);
                 for (String file : files)
                     selectFile.getItems().add(file);
-                selectFile.setPromptText("Select a file");
             }
         }).start();
     }
@@ -70,7 +71,8 @@ public class Controller {
     public void loadFiles() {
 
         DirectoryChooser directoryChooser = new DirectoryChooser();
-        directoryChooser.setInitialDirectory(directory);
+        if(directory.exists() && directory.isDirectory())
+            directoryChooser.setInitialDirectory(directory);
         File path = directoryChooser.showDialog(mainWindow.getScene().getWindow());
         if(path!=null) {
             directory = path;
@@ -120,22 +122,19 @@ public class Controller {
     @FXML
     public void loadData() {
 
-        new Thread( () -> {
+        if(selectedFile==null)
+            return;
+        table.getColumns().clear();
+        table.getItems().clear();
+        int i=0;
+        for(int num : selectedColumns) {
+            final int index = i;
+            TableColumn<ObservableList<String>, String> column = new TableColumn<>(header[num]);
+            column.setCellValueFactory( param -> new ReadOnlyObjectWrapper<>(param.getValue().get(index)));
+            table.getColumns().add(column);
+            ++i;
+        }
 
-            if(selectedFile==null)
-                return;
-            table.getColumns().clear();
-            table.getItems().clear();
-            int i=0;
-            for(int num : selectedColumns) {
-                final int index = i;
-                TableColumn<ObservableList<String>, String> column = new TableColumn<>(header[num]);
-                column.setCellValueFactory( param -> new ReadOnlyObjectWrapper<>(param.getValue().get(index)));
-                table.getColumns().add(column);
-                ++i;
-            }
-            new CSVReader(new File(directory, selectedFile)).loadDataInToTable(table, selectedColumns);
-
-        }).start();
+        new Thread( () -> new CSVReader(new File(directory, selectedFile)).loadDataInToTable(table, selectedColumns)).start();
     }
 }
