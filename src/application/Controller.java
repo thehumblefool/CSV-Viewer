@@ -43,7 +43,7 @@ public class Controller {
     private String[] header;
 
     public void initialize() {
-        defaultPath = "/home/toor/Documents/CSVs/";
+        defaultPath = File.separator + "home" + File.separator + "toor" + File.separator + "Documents" + File.separator + "CSVs";
         directory = new File(defaultPath);
         columnsMap = new HashMap<>();
         selectedColumns = new TreeSet<>();
@@ -51,7 +51,8 @@ public class Controller {
         header = null;
         selectFile.setTooltip(new Tooltip("Select a File"));
         selectDirectory.setTooltip(new Tooltip("Select a Folder"));
-        loadFiles(directory);
+        if(directory.exists() && directory.isDirectory())
+            loadFiles(directory);
     }
 
     private void loadFiles(File directory) {
@@ -61,7 +62,6 @@ public class Controller {
                 Arrays.sort(files, String.CASE_INSENSITIVE_ORDER);
                 for (String file : files)
                     selectFile.getItems().add(file);
-                selectFile.setPromptText("Select a file");
             }
         }).start();
     }
@@ -71,7 +71,8 @@ public class Controller {
     public void loadFiles() {
 
         DirectoryChooser directoryChooser = new DirectoryChooser();
-        directoryChooser.setInitialDirectory(directory);
+        if(directory.exists() && directory.isDirectory())
+            directoryChooser.setInitialDirectory(directory);
         File path = directoryChooser.showDialog(mainWindow.getScene().getWindow());
         if(path!=null) {
             directory = path;
